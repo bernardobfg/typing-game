@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import wordList from "./resources/words.json"
 const MAX_TYPED_KEYS = 35;
 const getWord = () => {
@@ -7,14 +7,17 @@ const getWord = () => {
     return word.toLowerCase();
 }
 const Word = ({ word, validKeys }) => {
-    if (!word) return false;
+    if (!word)
+        return null;
     const joinedKeys = validKeys.join('');
     const matched = word.slice(0, joinedKeys.length);
-    const remainder = word.slice(joinedKeys.length, )
+    const remainder = word.slice(joinedKeys.length,)
+
+    const matchedClass = (joinedKeys === word) ? "matched completed" : "matched";
     return (
-        
+
         <>
-            <span className="matched">{matched}</span>
+            <span className={matchedClass}>{matched}</span>
             <span className="remainder">{remainder}</span>
         </>
     )
@@ -29,42 +32,61 @@ const App = () => {
     const [validKeys, setValidKeys] = useState([]);
     const [completedWords, setCompletedWords] = useState([]);
     const [word, setWord] = useState("");
-    
+
+    const containerRef = useRef(null);
+
     useEffect(() => {
         setWord(getWord())
+        if (containerRef) {
+            containerRef.current.focus();
+        }
     }, [])
     useEffect(() => {
+        let timeout = null;
         const wordFromValidKeys = validKeys.join("").toLowerCase();
-        if ( word && word === wordFromValidKeys) {
-            let newWord = null;
-            do {
-                newWord = getWord();
-            }while(completedWords.includes(newWord));
-            setWord(newWord);
-            setValidKeys([]);
-            setCompletedWords(prev => [...prev, word]);            
+
+        if (word && word === wordFromValidKeys) {
+            timeout = setTimeout(() => {
+                let newWord = null;
+                do {
+                    newWord = getWord();
+                } while (completedWords.includes(newWord));
+                setWord(newWord);
+                setValidKeys([]);
+                setCompletedWords(prev => [...prev, word]);
+
+            }, 500);
         }
-    },[word, validKeys, completedWords])
+        return () => {
+            if (timeout)
+                clearTimeout(timeout);
+        }
+    }, [word, validKeys, completedWords])
     const handleKeyDown = (e) => {
         e.preventDefault();
         const { key } = e;
         setTypedKeys((prev) => [...prev, key].slice(MAX_TYPED_KEYS * -1))
-        
+
         if (isValidKey(key, word)) {
             setValidKeys((prev) => {
                 const isValidLength = prev.length <= word.length;
                 const isNextChar = isValidLength && word[prev.length] === key;
-                return isNextChar ? [...prev, key] : prev;                
+                return isNextChar ? [...prev, key] : prev;
             })
         }
     }
     return (
-        <div className="container" tabIndex="0" onKeyDown={handleKeyDown}>
+        <div
+            className="container"
+            tabIndex="0"
+            onKeyDown={handleKeyDown}
+            ref={containerRef}
+        >
             <div className="valid-keys">
-                <Word word={word} validKeys={validKeys}/>
+                <Word word={word} validKeys={validKeys} />
             </div>
             <div className="typed-keys">
-                {typedKeys? typedKeys.join(""): null}
+                {typedKeys ? typedKeys.join("") : null}
             </div>
             <div className="completed-words">
                 <ol>
